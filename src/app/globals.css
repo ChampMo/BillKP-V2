@@ -1,0 +1,265 @@
+@import "tailwindcss";
+
+/* เปิดใช้ variant `dark:` โดยผูกกับ data-theme บน <html> แทน prefers-color-scheme
+   เพราะผู้ใช้ต้องสลับเองได้ ไม่ใช่ตามระบบอย่างเดียว */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ── โทนสีสว่าง (ค่าเริ่มต้น) ─────────────────────────────────────── */
+:root {
+  --canvas: #eceef3;
+  --surface: #ffffff;
+  --surface-2: #f6f7f9;
+  --surface-hover: #f0f2f5;
+  --line: #e0e4ea;
+  --line-strong: #cdd3dc;
+  --ink: #1a1d23;
+  --ink-muted: #667085;
+  --ink-faint: #98a2b3;
+  --brand: #0c1c51;
+  --brand-soft: #e8ecf8;
+  --brand-contrast: #ffffff;
+  --accent: #2563eb;
+  --danger: #dc2626;
+  --success: #16a34a;
+  /* สีแท่งกราฟ ผ่านการตรวจ lightness/chroma/contrast กับพื้นโหมดสว่างแล้ว */
+  --chart-1: #2563eb;
+  --chart-grid: #e6e9ef;
+  --shadow-sheet: 0 1px 2px rgb(16 24 40 / 0.06), 0 12px 32px -8px rgb(16 24 40 / 0.18);
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.05), 0 1px 3px rgb(16 24 40 / 0.08);
+}
+
+/* ── โทนสีมืด ─────────────────────────────────────────────────────
+   ปรับ brand ให้สว่างขึ้น เพราะน้ำเงิน #0c1c51 ของโลโก้เข้มเกินกว่าจะอ่านออก
+   บนพื้นมืด — ใช้เฉพาะกับ "ขอบจอ" เท่านั้น ตัวใบเสร็จยังใช้สีจริงของโลโก้ */
+[data-theme="dark"] {
+  --canvas: #14161a;
+  --surface: #1c1f26;
+  --surface-2: #23272f;
+  --surface-hover: #2a2f38;
+  --line: #2f343d;
+  --line-strong: #414753;
+  --ink: #e6e8ec;
+  --ink-muted: #9aa3b0;
+  --ink-faint: #6b7482;
+  --brand: #8ea4f0;
+  --brand-soft: #232a44;
+  --brand-contrast: #10131a;
+  --accent: #5b8def;
+  --danger: #f0616b;
+  --success: #3dc06c;
+  /* โหมดมืดเลือกสีใหม่ ไม่ใช่กลับสีอัตโนมัติ — ตรวจกับพื้นมืดแยกต่างหาก */
+  --chart-1: #5b8def;
+  --chart-grid: #2b303a;
+  --shadow-sheet: 0 2px 4px rgb(0 0 0 / 0.4), 0 16px 40px -8px rgb(0 0 0 / 0.6);
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.3), 0 1px 3px rgb(0 0 0 / 0.4);
+}
+
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-hover: var(--surface-hover);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-faint: var(--ink-faint);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-brand-contrast: var(--brand-contrast);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --color-chart-1: var(--chart-1);
+  --color-chart-grid: var(--chart-grid);
+  --color-success: var(--success);
+  --font-sans: var(--font-sarabun), "Sarabun", system-ui, sans-serif;
+}
+
+/* สีหมึกของใบเสร็จ — ค่าคงที่ ไม่ผูกกับธีม ต้นฉบับพิมพ์หมึกน้ำเงิน สำเนาหมึกดำ */
+@theme {
+  --color-billink: #0c1c51;
+}
+
+html {
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+}
+
+/* เปลี่ยนธีมแล้วสีค่อย ๆ ไล่ ไม่กระพริบ — แต่ไม่แตะ transform/opacity
+   เพราะจะไปหน่วง animation อื่นที่ตั้งใจให้เร็ว */
+@media (prefers-reduced-motion: no-preference) {
+  body,
+  .theme-fade {
+    transition: background-color 220ms ease, border-color 220ms ease, color 220ms ease;
+  }
+}
+
+/* กันภาพกระตุกตอนสลับธีมด้วยสคริปต์ก่อน hydrate */
+.theme-switching * {
+  transition: none !important;
+}
+
+/* ── ข้อความแจ้งเตือน / กล่องยืนยัน ───────────────────────────────
+   เลื่อนเข้ามาสั้น ๆ พร้อมจางเข้า เพื่อให้สายตาจับได้ว่ามีของใหม่โผล่มา
+   ถ้าโผล่มาเฉย ๆ แบบไม่มีจังหวะ คนที่กำลังมองอยู่คนละมุมจอจะไม่ทันสังเกต */
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.toast-in {
+  animation: toast-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dialog-in {
+  animation: dialog-in 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* เคารพการตั้งค่าของผู้ใช้ที่ขอให้ลดการเคลื่อนไหว — ยังเห็นว่ามีของใหม่จากการจางเข้า */
+@media (prefers-reduced-motion: reduce) {
+  .toast-in,
+  .dialog-in {
+    animation: none;
+  }
+}
+
+/* ── แถบเลื่อน ────────────────────────────────────────────────── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-strong) transparent;
+}
+
+/* ── ใบเสร็จ ──────────────────────────────────────────────────── */
+
+/* กระดาษขาวเสมอ ไม่ว่าธีมไหน เพราะนี่คือภาพจำลองของกระดาษจริง
+   ถ้าทำใบเสร็จเป็นสีเข้มด้วย ผู้ใช้จะกะไม่ถูกว่าพิมพ์ออกมาแล้วหน้าตาเป็นยังไง */
+.bill-paper {
+  background: #ffffff;
+  box-shadow: var(--shadow-sheet);
+}
+
+.sheet-input {
+  background: transparent;
+  outline: none;
+  border-radius: 2px;
+  color: inherit;
+}
+
+.sheet-editable .sheet-input:not([readonly]) {
+  background: rgb(251 146 60 / 0.09);
+  transition: background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.sheet-editable .sheet-input:hover:not([readonly]) {
+  background: rgb(251 146 60 / 0.18);
+}
+
+.sheet-editable .sheet-input:focus:not([readonly]) {
+  background: rgb(59 130 246 / 0.14);
+  box-shadow: inset 0 0 0 1px rgb(59 130 246 / 0.6);
+}
+
+/* ── การพิมพ์ ─────────────────────────────────────────────────────
+   ของเดิมสร้าง PDF ด้วย html2canvas -> แปลงหน้าเป็น "รูป JPEG" แล้วยัดใส่ PDF
+   ผลคือตัวหนังสือไทยเป็น bitmap เบลอเวลาซูม ไฟล์ใหญ่หลาย MB และสระ/วรรณยุกต์
+   ลอยผิดตำแหน่งบ่อย
+
+   ที่นี่ใช้ระบบพิมพ์ของเบราว์เซอร์ตรง ๆ -> ตัวหนังสือเป็น vector จริง คมทุกระดับซูม
+   ไฟล์เล็กกว่าเดิมหลายเท่า และเลือก "Save as PDF" ในกล่องพิมพ์เพื่อได้ไฟล์ PDF ได้เลย */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+
+  /* ตอนพิมพ์ต้องไม่เหลือร่องรอยธีมมืดหรือการซูมบนหน้าจอ */
+  .bill-paper {
+    box-shadow: none !important;
+  }
+
+  .print-zoom {
+    zoom: 1 !important;
+  }
+
+  .sheet-input,
+  .sheet-editable .sheet-input {
+    background: transparent !important;
+    box-shadow: none !important;
+    outline: none !important;
+  }
+
+  .print-sheet {
+    margin: 0 !important;
+    break-inside: avoid;
+    break-after: page;
+  }
+
+  .print-sheet:last-of-type {
+    break-after: auto;
+  }
+
+  /* บังคับให้พิมพ์สีตามที่เห็นบนจอ (ต้นฉบับเป็นหมึกน้ำเงิน) */
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* A5 = ครึ่งหนึ่งของ A4 ย่อใบเสร็จลงแล้วหด "กล่อง" ตามด้วย
+     ถ้าย่อแต่ transform อย่างเดียว กล่องยังกินพื้นที่ 794x1123 อยู่
+     เบราว์เซอร์จะแตกหน้าเปล่าตามหลังทุกใบ */
+  html[data-paper="A5"] .print-sheet-wrap {
+    width: 559px;
+    height: 794px;
+    overflow: hidden;
+  }
+
+  html[data-paper="A5"] .print-sheet {
+    transform: scale(0.7042);
+    transform-origin: top left;
+  }
+}
+
+/* ── ชุดสำเนาเพิ่มเติมตอนพิมพ์ ─────────────────────────────────────
+   สั่งพิมพ์ต้นฉบับ 3 ใบ = ต้อง "มี" 3 ใบใน DOM จริง เพราะ CSS ทำสำเนา
+   element ไม่ได้ แต่บนจอไม่ต้องเห็นซ้ำ 3 ใบให้เกะกะและเลื่อนยาว
+   จึงซ่อนใบที่ 2 เป็นต้นไปไว้เฉพาะบนจอ */
+.print-only {
+  display: none;
+}
+
+@media print {
+  .print-only {
+    display: block;
+  }
+}
