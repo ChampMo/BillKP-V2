@@ -215,13 +215,17 @@ export default function BillHistory({ bills, total, totalSatang }: Props) {
     "h-9 px-3 rounded-lg border border-line bg-surface text-sm text-ink outline-none focus:border-accent transition-colors";
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col">
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col">
       {/* ── แถบหัวเรื่อง + ค้นหา ── */}
       <header className="no-print shrink-0 border-b border-line bg-surface sticky top-0 z-20 theme-fade">
-        <div className="h-14 px-5 flex items-center gap-3">
+        {/*
+          จอกว้างเรียงทุกอย่างในแถวเดียวสูง 14 เหมือนหน้าอื่น จอแคบให้ห่อบรรทัดได้
+          — ช่องค้นหากินเต็มบรรทัดของตัวเอง เพราะเป็นสิ่งที่ใช้บ่อยที่สุดในหน้านี้
+        */}
+        <div className="px-3 sm:px-5 py-2 min-h-14 flex flex-wrap items-center gap-2 lg:gap-3">
           <h1 className="text-lg font-bold text-ink">ประวัติบิล</h1>
 
-          <div className="relative">
+          <div className="relative order-last w-full lg:order-0 lg:w-auto">
             <Icon
               icon="ph:magnifying-glass-bold"
               width={16}
@@ -234,7 +238,7 @@ export default function BillHistory({ bills, total, totalSatang }: Props) {
               onChange={(event) => set({ q: event.target.value })}
               placeholder="ค้นหาเลขที่เอกสาร หรือชื่อผู้ซื้อ"
               aria-label="ค้นหาบิล"
-              className={`${fieldClass} w-72 pl-9`}
+              className={`${fieldClass} w-full lg:w-72 pl-9`}
             />
           </div>
 
@@ -257,7 +261,7 @@ export default function BillHistory({ bills, total, totalSatang }: Props) {
             )}
           </button>
 
-          <div className="ml-auto flex items-center gap-3">
+          <div className="ml-auto flex items-center gap-2 lg:gap-3">
             <div className="flex rounded-lg border border-line overflow-hidden" role="group">
               {(
                 [
@@ -287,35 +291,38 @@ export default function BillHistory({ bills, total, totalSatang }: Props) {
               type="button"
               disabled={exporting || filtered.length === 0}
               onClick={exportCsv}
-              className="h-9 px-3 rounded-lg border border-line text-sm text-ink-muted hover:bg-surface-hover hover:text-ink flex items-center gap-1.5 transition-colors disabled:opacity-40"
+              title="ส่งออก CSV"
+              className="h-9 px-2.5 sm:px-3 rounded-lg border border-line text-sm text-ink-muted hover:bg-surface-hover hover:text-ink flex items-center gap-1.5 transition-colors disabled:opacity-40"
             >
-              <Icon icon="ph:microsoft-excel-logo-bold" width={16} height={16} />
-              {exporting ? "กำลังส่งออก..." : "ส่งออก CSV"}
+              <Icon icon="ph:microsoft-excel-logo-bold" width={16} height={16} className="shrink-0" />
+              <span className="hidden sm:inline">
+                {exporting ? "กำลังส่งออก..." : "ส่งออก CSV"}
+              </span>
             </button>
           </div>
         </div>
 
         {advanced && (
-          <div className="px-5 pb-3 flex flex-wrap items-end gap-4 border-t border-line pt-3">
-            <label className="flex flex-col gap-1">
+          <div className="px-3 sm:px-5 pb-3 grid grid-cols-2 sm:flex sm:flex-wrap items-end gap-2 sm:gap-4 border-t border-line pt-3">
+            <label className="flex flex-col gap-1 min-w-0">
               <span className="text-[11px] text-ink-faint">ตั้งแต่วันที่</span>
               <input
                 type="date"
                 value={filters.from}
                 onChange={(event) => set({ from: event.target.value })}
-                className={fieldClass}
+                className={`${fieldClass} w-full sm:w-auto`}
               />
             </label>
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1 min-w-0">
               <span className="text-[11px] text-ink-faint">ถึงวันที่</span>
               <input
                 type="date"
                 value={filters.to}
                 onChange={(event) => set({ to: event.target.value })}
-                className={fieldClass}
+                className={`${fieldClass} w-full sm:w-auto`}
               />
             </label>
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1 min-w-0">
               <span className="text-[11px] text-ink-faint">ยอดตั้งแต่ (บาท)</span>
               <input
                 type="number"
@@ -323,10 +330,10 @@ export default function BillHistory({ bills, total, totalSatang }: Props) {
                 value={filters.min}
                 onChange={(event) => set({ min: event.target.value })}
                 placeholder="0"
-                className={`${fieldClass} w-32`}
+                className={`${fieldClass} w-full sm:w-32`}
               />
             </label>
-            <label className="flex flex-col gap-1">
+            <label className="flex flex-col gap-1 min-w-0">
               <span className="text-[11px] text-ink-faint">ถึง (บาท)</span>
               <input
                 type="number"
@@ -334,21 +341,21 @@ export default function BillHistory({ bills, total, totalSatang }: Props) {
                 value={filters.max}
                 onChange={(event) => set({ max: event.target.value })}
                 placeholder="ไม่จำกัด"
-                className={`${fieldClass} w-32`}
+                className={`${fieldClass} w-full sm:w-32`}
               />
             </label>
 
             <button
               type="button"
               onClick={() => setFilters(EMPTY_FILTERS)}
-              className="h-9 px-3 rounded-lg text-sm text-ink-muted hover:text-danger hover:bg-surface-hover transition-colors"
+              className="h-9 px-3 col-span-2 sm:col-auto rounded-lg border border-line sm:border-0 text-sm text-ink-muted hover:text-danger hover:bg-surface-hover transition-colors"
             >
               ล้างตัวกรอง
             </button>
           </div>
         )}
 
-        <div className="px-5 py-2 border-t border-line flex items-center gap-3 text-sm bg-surface-2">
+        <div className="px-3 sm:px-5 py-2 border-t border-line flex flex-wrap items-center gap-x-3 gap-y-1 text-sm bg-surface-2">
           <span className="text-ink-muted shrink-0">
             พบ <strong className="text-ink">{filteredCount}</strong> ใบ
             {filteredCount !== total && (
@@ -377,7 +384,7 @@ export default function BillHistory({ bills, total, totalSatang }: Props) {
       </header>
 
       {/* ── เนื้อหา ── */}
-      <div className="flex-1 min-h-0 overflow-auto p-5">
+      <div className="flex-1 min-h-0 overflow-auto p-3 sm:p-5">
         {bills.length === 0 && (
           <div className="mt-24 flex flex-col items-center gap-4 text-ink-faint">
             <Icon icon="ph:files-duotone" width={56} height={56} />
@@ -409,23 +416,26 @@ export default function BillHistory({ bills, total, totalSatang }: Props) {
                       <Link
                         key={bill.id}
                         href={`/bills/${bill.id}`}
-                        className="group flex items-center gap-4 bg-surface border border-line rounded-xl px-4 py-3 hover:border-accent hover:shadow-md transition-all duration-150"
+                        className="group flex items-center gap-3 sm:gap-4 bg-surface border border-line rounded-xl px-3 sm:px-4 py-3 hover:border-accent hover:shadow-md transition-all duration-150"
                       >
                         <div className="w-9 h-9 rounded-lg bg-brand-soft text-brand grid place-items-center shrink-0">
                           <Icon icon="ph:receipt-fill" width={18} height={18} />
                         </div>
 
-                        <div className="min-w-0 w-44 shrink-0">
-                          <div className="font-medium text-ink truncate">
-                            {bill.docNo || "ไม่ระบุเลขที่"}
+                        {/* จอแคบวางเลขที่เอกสารทับบนชื่อผู้ซื้อ ไม่ใช่เรียงข้างกันจนบีบจนอ่านไม่ออก */}
+                        <div className="min-w-0 flex-1 flex flex-col sm:flex-row sm:items-center sm:gap-4">
+                          <div className="min-w-0 sm:w-44 sm:shrink-0">
+                            <div className="font-medium text-ink truncate">
+                              {bill.docNo || "ไม่ระบุเลขที่"}
+                            </div>
+                            <div className="text-xs text-ink-faint">
+                              {bill.date || "ไม่ระบุวันที่"}
+                            </div>
                           </div>
-                          <div className="text-xs text-ink-faint">
-                            {bill.date || "ไม่ระบุวันที่"}
-                          </div>
-                        </div>
 
-                        <div className="flex-1 min-w-0 text-ink-muted truncate">
-                          {bill.buyerName || "—"}
+                          <div className="flex-1 min-w-0 text-sm sm:text-base text-ink-muted truncate">
+                            {bill.buyerName || "—"}
+                          </div>
                         </div>
 
                         <div className="text-right shrink-0 tabular-nums font-semibold text-ink">
@@ -437,7 +447,7 @@ export default function BillHistory({ bills, total, totalSatang }: Props) {
                           icon="ph:caret-right-bold"
                           width={14}
                           height={14}
-                          className="text-ink-faint shrink-0 group-hover:text-accent transition-colors"
+                          className="hidden sm:block text-ink-faint shrink-0 group-hover:text-accent transition-colors"
                         />
                       </Link>
                     );
@@ -447,7 +457,7 @@ export default function BillHistory({ bills, total, totalSatang }: Props) {
             ))}
           </div>
         ) : (
-          <div className="flex flex-wrap justify-center gap-6" style={{ zoom: "45%" }}>
+          <div className="sheet-grid flex flex-wrap justify-center gap-6">
             {filtered.map((bill) => (
               <Link
                 key={bill.id}

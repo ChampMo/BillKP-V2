@@ -26,7 +26,7 @@ export default function AppError({
   }, [error]);
 
   return (
-    <div className="flex-1 min-w-0 grid place-items-center p-8">
+    <div className="flex-1 min-w-0 min-h-0 overflow-auto grid place-items-center p-5 sm:p-8">
       <div className="flex max-w-md flex-col items-center gap-4 text-center">
         <div className="grid h-14 w-14 place-items-center rounded-2xl bg-danger/10 text-danger">
           <Icon icon="ph:warning-circle-fill" width={30} height={30} />

@@ -6,6 +6,7 @@ import SheetStack from "@/components/SheetStack";
 import Toolbar, { type SheetCounts } from "@/components/Toolbar";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
+import { useFitZoom } from "@/lib/use-fit-zoom";
 import { useShortcuts } from "@/lib/use-shortcuts";
 import { useSuggestions } from "@/lib/use-suggestions";
 import {
@@ -71,7 +72,7 @@ export default function BillEditor() {
   const [bill, setBill] = useState<Bill>(initialBill);
   const [paper, setPaper] = useState<PaperSize>("A5");
   const [counts, setCounts] = useState<SheetCounts>({ main: 1, copy: 1 });
-  const [zoom, setZoom] = useState(80);
+  const [zoom, setZoom] = useFitZoom();
   const [confirmClear, setConfirmClear] = useState(false);
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(false);

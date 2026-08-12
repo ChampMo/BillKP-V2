@@ -80,7 +80,7 @@ export default function TrashList({ bills }: { bills: SavedBill[] }) {
   };
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col">
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col">
       <ConfirmDialog
         open={purgeTarget !== null}
         title={
@@ -109,9 +109,9 @@ export default function TrashList({ bills }: { bills: SavedBill[] }) {
         onConfirm={emptyTrash}
       />
 
-      <header className="h-14 shrink-0 border-b border-line bg-surface px-5 flex items-center gap-3 sticky top-0 z-20 theme-fade">
+      <header className="min-h-14 shrink-0 border-b border-line bg-surface px-3 sm:px-5 py-2 sm:py-0 flex flex-wrap items-center gap-x-3 gap-y-1 sticky top-0 z-20 theme-fade">
         <h1 className="text-lg font-bold text-ink">ถังขยะ</h1>
-        <p className="text-xs text-ink-faint">
+        <p className="text-xs text-ink-faint order-last w-full sm:order-0 sm:w-auto">
           บิลที่ลบจะเก็บไว้ {TRASH_RETENTION_DAYS} วัน แล้วระบบจะลบถาวรให้เอง
         </p>
 
@@ -119,7 +119,7 @@ export default function TrashList({ bills }: { bills: SavedBill[] }) {
           <button
             type="button"
             onClick={() => setConfirmEmpty(true)}
-            className="ml-auto h-9 px-3 rounded-lg border border-line text-sm text-ink-muted hover:text-danger hover:border-danger transition-colors flex items-center gap-1.5"
+            className="ml-auto h-9 px-3 rounded-lg border border-line text-sm text-ink-muted hover:text-danger hover:border-danger transition-colors flex items-center gap-1.5 shrink-0"
           >
             <Icon icon="ph:trash-simple-bold" width={15} height={15} />
             ล้างถังขยะ
@@ -127,7 +127,7 @@ export default function TrashList({ bills }: { bills: SavedBill[] }) {
         )}
       </header>
 
-      <div className="flex-1 min-h-0 overflow-auto p-5">
+      <div className="flex-1 min-h-0 overflow-auto p-3 sm:p-5">
         {bills.length === 0 ? (
           <div className="mt-24 flex flex-col items-center gap-3 text-ink-faint">
             <Icon icon="ph:trash-duotone" width={56} height={56} />
@@ -142,23 +142,26 @@ export default function TrashList({ bills }: { bills: SavedBill[] }) {
               return (
                 <div
                   key={bill.id}
-                  className="flex items-center gap-4 bg-surface border border-line rounded-xl px-4 py-3"
+                  className="flex flex-wrap items-center gap-x-3 gap-y-2 sm:gap-4 bg-surface border border-line rounded-xl px-3 sm:px-4 py-3"
                 >
                   <div className="w-9 h-9 rounded-lg bg-surface-2 text-ink-faint grid place-items-center shrink-0">
                     <Icon icon="ph:receipt-fill" width={18} height={18} />
                   </div>
 
-                  <div className="min-w-0 w-44 shrink-0">
-                    <div className="font-medium text-ink truncate">
-                      {bill.docNo || "ไม่ระบุเลขที่"}
+                  {/* จอแคบเรียงเลขที่เอกสารทับชื่อผู้ซื้อ แล้วดันปุ่มลงไปเป็นบรรทัดของตัวเอง */}
+                  <div className="min-w-0 flex-1 flex flex-col lg:flex-row lg:items-center lg:gap-4">
+                    <div className="min-w-0 lg:w-44 lg:shrink-0">
+                      <div className="font-medium text-ink truncate">
+                        {bill.docNo || "ไม่ระบุเลขที่"}
+                      </div>
+                      <div className="text-xs text-ink-faint">
+                        {bill.deletedAt && `ลบเมื่อ ${formatDateTH(bill.deletedAt)}`}
+                      </div>
                     </div>
-                    <div className="text-xs text-ink-faint">
-                      {bill.deletedAt && `ลบเมื่อ ${formatDateTH(bill.deletedAt)}`}
-                    </div>
-                  </div>
 
-                  <div className="flex-1 min-w-0 text-ink-muted truncate">
-                    {bill.buyerName || "—"}
+                    <div className="flex-1 min-w-0 text-sm lg:text-base text-ink-muted truncate">
+                      {bill.buyerName || "—"}
+                    </div>
                   </div>
 
                   <div className="text-right shrink-0 tabular-nums text-ink-muted">
@@ -175,7 +178,7 @@ export default function TrashList({ bills }: { bills: SavedBill[] }) {
                     เหลือ {remaining} วัน
                   </span>
 
-                  <div className="flex gap-1.5 shrink-0">
+                  <div className="flex gap-1.5 shrink-0 ml-auto">
                     <button
                       type="button"
                       disabled={busyId === bill.id}

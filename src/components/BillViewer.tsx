@@ -9,6 +9,7 @@ import Toolbar, { type SheetCounts } from "@/components/Toolbar";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { stageBillForNewForm } from "@/components/BillEditor";
 import { useToast } from "@/components/Toast";
+import { useFitZoom } from "@/lib/use-fit-zoom";
 import { useShortcuts } from "@/lib/use-shortcuts";
 import { useSuggestions } from "@/lib/use-suggestions";
 import { computeTotals, TRASH_RETENTION_DAYS, type Bill, type SavedBill } from "@/lib/bill";
@@ -26,7 +27,7 @@ export default function BillViewer({ bill }: { bill: SavedBill }) {
 
   const [paper, setPaper] = useState<PaperSize>("A5");
   const [counts, setCounts] = useState<SheetCounts>({ main: 1, copy: 1 });
-  const [zoom, setZoom] = useState(80);
+  const [zoom, setZoom] = useFitZoom();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -121,21 +122,22 @@ export default function BillViewer({ bill }: { bill: SavedBill }) {
         onConfirm={moveToTrash}
       />
 
-      <div className="flex-1 min-w-0 flex flex-col">
-        <header className="no-print h-14 shrink-0 border-b border-line bg-surface px-5 flex items-center gap-4 sticky top-0 z-20 theme-fade">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+        <header className="no-print h-14 shrink-0 border-b border-line bg-surface px-3 sm:px-5 flex items-center gap-2 sm:gap-4 sticky top-0 z-20 theme-fade">
           <Link
             href="/bills"
-            className="flex items-center gap-1.5 text-sm text-ink-muted hover:text-ink transition-colors"
+            aria-label="กลับไปหน้าประวัติบิล"
+            className="flex items-center gap-1.5 shrink-0 text-sm text-ink-muted hover:text-ink transition-colors"
           >
             <Icon icon="ph:arrow-left-bold" width={16} height={16} />
-            ประวัติบิล
+            <span className="hidden sm:inline">ประวัติบิล</span>
           </Link>
 
-          <div className="h-5 w-px bg-line" />
+          <div className="hidden sm:block h-5 w-px bg-line" />
 
-          <div className="flex items-baseline gap-2 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-2 min-w-0 leading-tight">
             <span className="font-semibold text-ink truncate">{bill.docNo || "ไม่ระบุเลขที่"}</span>
-            <span className="text-xs text-ink-faint shrink-0">
+            <span className="text-xs text-ink-faint truncate">
               บันทึก {formatDateTH(bill.createdAt)}
             </span>
           </div>

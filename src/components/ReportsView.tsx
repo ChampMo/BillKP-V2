@@ -30,7 +30,7 @@ function StatTile({
   icon: string;
 }) {
   return (
-    <div className="flex-1 min-w-52 rounded-xl border border-line bg-surface p-4">
+    <div className="flex-1 min-w-full sm:min-w-52 rounded-xl border border-line bg-surface p-4">
       <div className="flex items-center gap-2 text-ink-muted text-xs mb-2">
         <Icon icon={icon} width={15} height={15} />
         {label}
@@ -63,13 +63,13 @@ export default function ReportsView({ summary }: { summary: MonthlySummary[] }) 
       : null;
 
   return (
-    <div className="flex-1 min-w-0 flex flex-col">
-      <header className="no-print h-14 shrink-0 border-b border-line bg-surface px-5 flex items-center sticky top-0 z-20 theme-fade">
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col">
+      <header className="no-print min-h-14 shrink-0 border-b border-line bg-surface px-3 sm:px-5 py-2 sm:py-0 flex flex-wrap items-center gap-x-3 sticky top-0 z-20 theme-fade">
         <h1 className="text-lg font-bold text-ink">สรุปยอด</h1>
-        <p className="text-xs text-ink-faint ml-3">ตัวเลขนับเฉพาะบิลที่ยังไม่ถูกลบ</p>
+        <p className="text-xs text-ink-faint">ตัวเลขนับเฉพาะบิลที่ยังไม่ถูกลบ</p>
       </header>
 
-      <div className="flex-1 min-h-0 overflow-auto p-5">
+      <div className="flex-1 min-h-0 overflow-auto p-3 sm:p-5">
         {summary.length === 0 ? (
           <div className="mt-24 flex flex-col items-center gap-3 text-ink-faint">
             <Icon icon="ph:chart-bar-duotone" width={56} height={56} />
@@ -105,7 +105,7 @@ export default function ReportsView({ summary }: { summary: MonthlySummary[] }) 
               />
             </div>
 
-            <div className="rounded-xl border border-line bg-surface p-5">
+            <div className="rounded-xl border border-line bg-surface p-3 sm:p-5">
               <MonthlyChart data={summary.slice(0, CHART_MONTHS)} />
             </div>
 
@@ -117,8 +117,9 @@ export default function ReportsView({ summary }: { summary: MonthlySummary[] }) 
                   ครบทุกเดือนที่มีบิล ({summary.length} เดือน)
                 </span>
               </div>
+              {/* จอแคบให้เลื่อนตารางแนวนอนแทนการบีบคอลัมน์ — ตัวเลขเงินขึ้นบรรทัดใหม่แล้วอ่านผิดง่าย */}
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-136 text-sm">
                   <thead>
                     <tr className="text-ink-faint text-xs border-b border-line">
                       <th className="text-left font-medium px-4 py-2.5">เดือน</th>

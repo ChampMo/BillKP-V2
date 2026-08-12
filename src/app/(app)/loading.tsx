@@ -7,15 +7,15 @@
  */
 export default function Loading() {
   return (
-    <div className="flex-1 min-w-0 flex flex-col" aria-busy="true" aria-live="polite">
+    <div className="flex-1 min-w-0 min-h-0 flex flex-col" aria-busy="true" aria-live="polite">
       <span className="sr-only">กำลังโหลดข้อมูล</span>
 
-      <header className="h-14 shrink-0 border-b border-line bg-surface px-5 flex items-center gap-3">
+      <header className="h-14 shrink-0 border-b border-line bg-surface px-3 sm:px-5 flex items-center gap-3">
         <div className="h-5 w-32 rounded bg-surface-hover animate-pulse" />
         <div className="h-5 w-24 rounded bg-surface-hover animate-pulse" />
       </header>
 
-      <div className="flex-1 p-5 flex flex-col gap-3 max-w-5xl">
+      <div className="flex-1 min-h-0 overflow-hidden p-3 sm:p-5 flex flex-col gap-3 max-w-5xl">
         {Array.from({ length: 6 }, (_, index) => (
           <div
             key={index}

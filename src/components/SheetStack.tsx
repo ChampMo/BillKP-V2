@@ -48,14 +48,14 @@ export default function SheetStack({
   const nothing = counts.main === 0 && counts.copy === 0;
 
   return (
-    <div className="flex-1 min-w-0 overflow-auto">
-      <div className="flex justify-center p-6 print:p-0">
+    <div className="flex-1 min-w-0 min-h-0 overflow-auto print:overflow-visible">
+      <div className="flex justify-center p-3 sm:p-6 print:p-0">
         {/*
           ใช้ `zoom` ไม่ใช่ `transform: scale()` เพราะ zoom ย่อ "กล่อง" ตามไปด้วย
           ใบเสร็จที่ย่อแล้วจึงไม่ทิ้งพื้นที่ว่างเท่าขนาดเดิมไว้ และ scrollbar ตรงกับที่เห็นจริง
         */}
         <div
-          className="print-zoom flex flex-col items-center gap-6 print:gap-0"
+          className="print-zoom flex flex-col items-center gap-3 sm:gap-6 print:gap-0"
           style={{ zoom: `${zoom}%` }}
         >
           {render("main", counts.main)}

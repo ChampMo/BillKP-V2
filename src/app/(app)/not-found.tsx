@@ -8,7 +8,7 @@ import Link from "next/link";
  */
 export default function NotFound() {
   return (
-    <div className="flex-1 min-w-0 grid place-items-center p-8">
+    <div className="flex-1 min-w-0 min-h-0 overflow-auto grid place-items-center p-5 sm:p-8">
       <div className="flex max-w-sm flex-col items-center gap-4 text-center">
         <span className="text-5xl font-bold text-ink-faint">404</span>
 

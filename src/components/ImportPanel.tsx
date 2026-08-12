@@ -111,7 +111,7 @@ export default function ImportPanel() {
   };
 
   return (
-    <div className="flex-1 min-w-0 overflow-auto p-5 max-w-3xl">
+    <div className="flex-1 min-w-0 min-h-0 overflow-auto p-3 sm:p-5 max-w-3xl">
       <ConfirmDialog
         open={confirming}
         danger={false}
@@ -160,7 +160,7 @@ export default function ImportPanel() {
             const dropped = event.dataTransfer.files?.[0];
             if (dropped) void acceptFile(dropped);
           }}
-          className={`flex gap-4 w-80 h-40 items-center justify-center rounded-xl shadow-md border-4 border-dashed duration-200 active:scale-95 ${
+          className={`flex gap-4 w-full max-w-80 h-40 items-center justify-center rounded-xl shadow-md border-4 border-dashed duration-200 active:scale-95 ${
             dragging ? "bg-accent/10 border-accent" : "bg-surface-2 border-line hover:border-line-strong"
           }`}
         >
@@ -203,7 +203,7 @@ export default function ImportPanel() {
           type="button"
           disabled={!parsed}
           onClick={() => setConfirming(true)}
-          className="mt-5 text-sm w-80 h-11 flex items-center justify-center rounded-xl shadow-md text-white active:scale-95 duration-200 bg-accent hover:brightness-110 disabled:bg-line-strong disabled:active:scale-100"
+          className="mt-5 text-sm w-full max-w-80 h-11 flex items-center justify-center rounded-xl shadow-md text-white active:scale-95 duration-200 bg-accent hover:brightness-110 disabled:bg-line-strong disabled:active:scale-100"
         >
           นำเข้าข้อมูล
         </button>
@@ -220,7 +220,7 @@ export default function ImportPanel() {
           type="button"
           disabled={exporting}
           onClick={downloadBackup}
-          className="text-sm w-80 h-11 flex items-center justify-center rounded-xl bg-surface border border-line text-ink hover:bg-surface-hover active:scale-95 duration-200 disabled:opacity-60"
+          className="text-sm w-full max-w-80 h-11 flex items-center justify-center rounded-xl bg-surface border border-line text-ink hover:bg-surface-hover active:scale-95 duration-200 disabled:opacity-60"
         >
           <Icon icon="material-symbols:download" width={24} height={24} className="mr-2" />
           ดาวน์โหลดข้อมูลทั้งหมด

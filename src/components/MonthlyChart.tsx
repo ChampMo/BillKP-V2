@@ -64,10 +64,14 @@ export default function MonthlyChart({ data }: { data: MonthlySummary[] }) {
       </figcaption>
       <p className="text-xs text-ink-faint mb-3">รวมภาษีมูลค่าเพิ่มแล้ว หน่วยเป็นบาท</p>
 
-      <div className="relative">
+      {/*
+        จอแคบให้เลื่อนกราฟแนวนอนแทนการบีบให้พอดีจอ — ย่อ 12 เดือนลงเหลือ ~340px
+        ตัวหนังสือกำกับแกนจะเหลือราว 5px ซึ่งอ่านไม่ออก
+      */}
+      <div className="relative overflow-x-auto">
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
-          className="w-full h-auto"
+          className="w-full h-auto min-w-136"
           role="img"
           aria-label={`กราฟแท่งแสดงยอดขายรวมรายเดือน ${series.length} เดือน ตัวเลขทั้งหมดอยู่ในตารางด้านล่าง`}
         >
