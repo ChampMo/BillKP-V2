@@ -85,20 +85,18 @@ export async function POST(request: Request) {
     await connectToDatabase();
 
     /**
-     * id ที่อ้างในไฟล์ต้องเป็นบิลของผู้ใช้คนนี้เท่านั้นถึงจะเขียนทับได้
-     * ถ้าปล่อยให้เขียนตาม id ในไฟล์ตรง ๆ ใครก็แก้บิลของคนอื่นได้ด้วยการ
-     * แต่งไฟล์ใส่ id มาเอง — id ที่ไม่ใช่ของตัวเองจึงถูกนับเป็นใบใหม่แทน
+     * id ที่อ้างในไฟล์ต้องมีอยู่จริงในฐานข้อมูลถึงจะเขียนทับได้
+     * ที่เหลือนับเป็นใบใหม่ — ไม่ยอมให้ไฟล์กำหนด _id ของเอกสารที่จะสร้าง
+     * เพราะ id ที่แต่งขึ้นมาเองจะไปชนกับบิลที่ระบบสร้างในอนาคตได้
      */
     const claimedIds = parsed.data
       .map((entry) => entry.sourceId)
       .filter((id): id is string => Boolean(id) && mongoose.isValidObjectId(id));
 
-    const ownedIds = new Set(
-      (
-        await BillModel.find({ _id: { $in: claimedIds }, ownerEmail })
-          .select("_id")
-          .lean()
-      ).map((doc) => String(doc._id))
+    const existingIds = new Set(
+      (await BillModel.find({ _id: { $in: claimedIds } }).select("_id").lean()).map((doc) =>
+        String(doc._id)
+      )
     );
 
     const toInsert: ReturnType<typeof toDocument>[] = [];
@@ -106,7 +104,7 @@ export async function POST(request: Request) {
 
     for (const entry of parsed.data) {
       const doc = toDocument(entry, ownerEmail);
-      if (entry.sourceId && ownedIds.has(entry.sourceId)) {
+      if (entry.sourceId && existingIds.has(entry.sourceId)) {
         toUpdate.push({ id: entry.sourceId, doc });
       } else {
         toInsert.push(doc);
@@ -115,15 +113,23 @@ export async function POST(request: Request) {
 
     if (toUpdate.length > 0) {
       await BillModel.bulkWrite(
-        toUpdate.map(({ id, doc }) => ({
-          updateOne: {
-            filter: { _id: id, ownerEmail },
-            // mongoose พิมพ์ items ของ schema เป็น DocumentArray ซึ่งเป็นชนิดของ
-            // เอกสารที่ hydrate แล้ว ไม่ใช่ของ payload ที่ส่งไปเขียน — ตอนเขียนจริง
-            // mongoose รับ array ธรรมดา (insertMany ข้างล่างก็ส่ง array ธรรมดา)
-            update: { $set: doc } as mongoose.UpdateQuery<BillDocument>,
-          },
-        })),
+        toUpdate.map(({ id, doc }) => {
+          // ไฟล์สำรองไม่ได้เก็บว่าใครเป็นคนออกบิล (ดู toSavedBill) การกู้ไฟล์
+          // จึงต้องไม่เขียนทับชื่อคนออกด้วยชื่อคนที่กดกู้ ไม่งั้นประวัติว่าใคร
+          // ออกใบไหนจะกลายเป็นชื่อเดียวกันหมดทุกครั้งที่กู้ข้อมูล
+          const { ownerEmail: _creator, ...withoutOwner } = doc;
+          void _creator;
+
+          return {
+            updateOne: {
+              filter: { _id: id },
+              // mongoose พิมพ์ items ของ schema เป็น DocumentArray ซึ่งเป็นชนิดของ
+              // เอกสารที่ hydrate แล้ว ไม่ใช่ของ payload ที่ส่งไปเขียน — ตอนเขียนจริง
+              // mongoose รับ array ธรรมดา (insertMany ข้างล่างก็ส่ง array ธรรมดา)
+              update: { $set: withoutOwner } as mongoose.UpdateQuery<BillDocument>,
+            },
+          };
+        }),
         { timestamps: false }
       );
     }

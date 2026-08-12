@@ -8,8 +8,10 @@
  *    ยอดเป็น 0 หน้าสรุปยอดเลยนับจำนวนบิลถูกแต่ยอดเงินเป็นศูนย์
  * 2. วันที่บนบิล (issuedAt) — บิลเก่าเก็บวันที่เป็นข้อความล้วนซึ่งจัดกลุ่มรายเดือนไม่ได้
  * 3. เลขที่เอกสารซ้ำ — รายงานอย่างเดียว เพราะต้องให้คนตัดสินใจว่าจะแก้ใบไหน
+ * 4. index เก่าที่ผูกกับ ownerEmail — สมัยที่บิลยังแยกตามบัญชีผู้ใช้
  *
- * ทั้งสองข้อแรกเป็นค่าที่คำนวณ/อ่านจาก field อื่นได้อยู่แล้ว เขียนทับจึงปลอดภัย
+ * ข้อ 1-2 เป็นค่าที่คำนวณ/อ่านจาก field อื่นได้อยู่แล้ว เขียนทับจึงปลอดภัย
+ * ข้อ 4 ลบเฉพาะ index ไม่แตะตัวบิล และ mongoose สร้าง index ชุดใหม่ให้เองตอนแอปเริ่ม
  */
 import mongoose from "mongoose";
 import { computeTotals, type BillItem } from "../src/lib/bill.ts";
@@ -83,17 +85,56 @@ if (operations.length > 0 && !dryRun) {
   await bills.bulkWrite(operations, { ordered: false });
 }
 
+/**
+ * เลขที่เอกสารซ้ำ — นับข้ามบัญชีด้วย
+ *
+ * เดิมเลขห้ามซ้ำแค่ในบัญชีเดียวกัน ตอนนี้บิลเป็นของบริษัทชุดเดียว เลขจึงห้ามซ้ำ
+ * ทั้งระบบ ฐานข้อมูลที่เคยมีสองบัญชีต่างคนต่างออกเลขเดียวกันจะโผล่มาที่นี่
+ */
 const duplicates = await bills
-  .aggregate<{ _id: { ownerEmail: string; docNo: string }; count: number }>([
+  .aggregate<{ _id: string; count: number; owners: string[] }>([
     { $match: { docNo: { $gt: "" } } },
-    { $group: { _id: { ownerEmail: "$ownerEmail", docNo: "$docNo" }, count: { $sum: 1 } } },
+    {
+      $group: {
+        _id: "$docNo",
+        count: { $sum: 1 },
+        owners: { $addToSet: "$ownerEmail" },
+      },
+    },
     { $match: { count: { $gt: 1 } } },
     { $sort: { count: -1 } },
   ])
   .toArray();
 
-const indexes = await bills.listIndexes().toArray();
-const hasUniqueDocNo = indexes.some((index) => index.name === "ownerEmail_1_docNo_1");
+/**
+ * ย้ายจาก index ที่ผูกกับ ownerEmail มาเป็นชุดที่ใช้ร่วมกันทั้งบริษัท
+ *
+ * สร้างของใหม่ให้เสร็จก่อนแล้วค่อยทิ้งของเก่าเสมอ — ถ้าทิ้งก่อนจะมีช่วงที่ไม่มี
+ * ด่านกันเลขที่เอกสารซ้ำเลย ซึ่งถ้ามีคนกดบันทึกพอดีจะได้ใบซ้ำเข้ามาจริง ๆ
+ *
+ * mongoose สร้าง index ที่ประกาศไว้ให้เองตอนแอปเริ่ม แต่ไม่เคยลบของเก่าที่เลิกใช้
+ * ปล่อยไว้ก็ไม่ผิด แต่กินพื้นที่และเวลาเขียนทุกครั้งโดยไม่มีใครใช้อ่าน
+ */
+const RETIRED_INDEXES = ["ownerEmail_1_docNo_1", "ownerEmail_1_deletedAt_1_createdAt_-1"];
+
+const indexNames = (await bills.listIndexes().toArray()).map((index) => index.name);
+const retired = RETIRED_INDEXES.filter((name) => indexNames.includes(name));
+let hasUniqueDocNo = indexNames.includes("docNo_1");
+
+// เลขซ้ำอยู่ = สร้าง unique index ไม่ผ่านอยู่แล้ว และห้ามทิ้งด่านเก่าทิ้งไปเฉย ๆ
+if (duplicates.length === 0 && !dryRun) {
+  if (!hasUniqueDocNo) {
+    await bills.createIndex(
+      { docNo: 1 },
+      { unique: true, partialFilterExpression: { docNo: { $gt: "" } } }
+    );
+    hasUniqueDocNo = true;
+  }
+  if (!indexNames.includes("deletedAt_1_createdAt_-1")) {
+    await bills.createIndex({ deletedAt: 1, createdAt: -1 });
+  }
+  for (const name of retired) await bills.dropIndex(name);
+}
 
 console.log(`ตรวจบิลทั้งหมด ${checked} ใบ`);
 console.log(`  ยอดรวมไม่ตรง       ${totalsFixed} ใบ`);
@@ -106,13 +147,22 @@ if (datesUnreadable > 0) {
 if (duplicates.length > 0) {
   console.log(`\n⚠ เลขที่เอกสารซ้ำ ${duplicates.length} เลข — ต้องแก้ก่อนระบบถึงจะกันเลขซ้ำได้:`);
   for (const row of duplicates.slice(0, 20)) {
-    console.log(`  ${row._id.docNo}  (${row.count} ใบ)  ${row._id.ownerEmail}`);
+    console.log(`  ${row._id}  (${row.count} ใบ)  ${row.owners.join(", ")}`);
   }
   if (duplicates.length > 20) console.log(`  ... และอีก ${duplicates.length - 20} เลข`);
+  console.log("  แก้เลขให้ไม่ซ้ำในหน้าประวัติบิล แล้วรัน npm run repair อีกครั้ง");
 } else if (hasUniqueDocNo) {
   console.log("\nเลขที่เอกสารไม่ซ้ำ และ unique index ทำงานอยู่");
 } else {
-  console.log("\nเลขที่เอกสารไม่ซ้ำ — เปิดแอปหนึ่งครั้งเพื่อให้ mongoose สร้าง unique index");
+  console.log("\nเลขที่เอกสารไม่ซ้ำ — จะสร้าง unique index ให้ตอนรันจริง");
+}
+
+if (retired.length === 0) {
+  console.log("ไม่มี index เก่าที่ผูกกับ ownerEmail ค้างอยู่");
+} else if (duplicates.length > 0) {
+  console.log(`คง index เก่าไว้ก่อน (${retired.join(", ")}) จนกว่าเลขที่เอกสารจะไม่ซ้ำ`);
+} else {
+  console.log(`${dryRun ? "จะทิ้ง" : "ทิ้ง"} index เก่า: ${retired.join(", ")}`);
 }
 
 console.log(dryRun ? "\n(dry run: ยังไม่ได้เขียนอะไรลงฐานข้อมูล)" : "\nซ่อมเรียบร้อย");

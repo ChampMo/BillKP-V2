@@ -13,12 +13,20 @@ import { THAI_TIMEZONE } from "@/lib/date-th";
  * — ประหยัดไป 1 รอบ network และ 1 cold start ของ serverless function
  */
 
-export async function requireOwnerEmail(): Promise<string> {
+/**
+ * ด่านตรวจว่าล็อกอินแล้วจริง
+ *
+ * บิลทุกใบเป็นของบริษัท ไม่ใช่ของพนักงานคนใดคนหนึ่ง — ทุกบัญชีที่ผ่าน
+ * `ALLOWED_EMAILS` จึงเห็นและแก้บิลชุดเดียวกัน query จึงไม่กรองด้วยอีเมล
+ * ตัวกันคนนอกคือรายชื่ออีเมลที่อนุญาตตอนล็อกอิน (ดู src/auth.ts)
+ *
+ * ยังต้องเรียกฟังก์ชันนี้ก่อนแตะฐานข้อมูลทุกครั้ง เพื่อไม่ให้ request ที่ไม่มี
+ * session หลุดไปอ่านข้อมูลได้ถ้าวันหนึ่ง middleware ถูกแก้พลาด
+ */
+export async function requireSignedIn(): Promise<void> {
   const session = await auth();
-  const email = session?.user?.email;
   // middleware กันไว้แล้ว มาถึงตรงนี้โดยไม่มี session ไม่ได้ — ถ้าเกิดขึ้นคือบั๊ก
-  if (!email) throw new Error("เรียกใช้ข้อมูลบิลโดยไม่มี session");
-  return email;
+  if (!session?.user?.email) throw new Error("เรียกใช้ข้อมูลบิลโดยไม่มี session");
 }
 
 export type BillFilter = {
@@ -37,8 +45,8 @@ function escapeRegex(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, (character) => `\\${character}`);
 }
 
-function buildQuery(ownerEmail: string, filter: BillFilter) {
-  const query: Record<string, unknown> = { ownerEmail, deletedAt: null };
+function buildQuery(filter: BillFilter) {
+  const query: Record<string, unknown> = { deletedAt: null };
 
   const needle = filter.q?.trim();
   if (needle) {
@@ -83,10 +91,10 @@ export async function listBills(
   filter: BillFilter = {},
   limit = BILLS_PAGE_SIZE
 ): Promise<SavedBill[]> {
-  const ownerEmail = await requireOwnerEmail();
+  await requireSignedIn();
   await connectToDatabase();
 
-  const docs = await BillModel.find(buildQuery(ownerEmail, filter))
+  const docs = await BillModel.find(buildQuery(filter))
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean();
@@ -108,11 +116,11 @@ export type BillsOverview = {
  * ถ้าคำนวณจากที่โหลดมาอย่างเดียว ตัวเลขจะผิดทันทีที่บิลเกินหนึ่งหน้า
  */
 export async function summarizeBills(filter: BillFilter = {}): Promise<BillsOverview> {
-  const ownerEmail = await requireOwnerEmail();
+  await requireSignedIn();
   await connectToDatabase();
 
   const [row] = await BillModel.aggregate<{ total: number; totalSatang: number }>([
-    { $match: buildQuery(ownerEmail, filter) },
+    { $match: buildQuery(filter) },
     { $group: { _id: null, total: { $sum: 1 }, totalSatang: { $sum: "$totalSatang" } } },
   ]);
 
@@ -122,19 +130,19 @@ export async function summarizeBills(filter: BillFilter = {}): Promise<BillsOver
 export async function getBill(id: string): Promise<SavedBill | null> {
   if (!mongoose.isValidObjectId(id)) return null;
 
-  const ownerEmail = await requireOwnerEmail();
+  await requireSignedIn();
   await connectToDatabase();
 
-  const doc = await BillModel.findOne({ _id: id, ownerEmail, deletedAt: null }).lean();
+  const doc = await BillModel.findOne({ _id: id, deletedAt: null }).lean();
   return doc ? toSavedBill(doc) : null;
 }
 
 /** บิลที่อยู่ในถังขยะ เรียงตามเวลาที่ลบล่าสุด */
 export async function listTrash(): Promise<SavedBill[]> {
-  const ownerEmail = await requireOwnerEmail();
+  await requireSignedIn();
   await connectToDatabase();
 
-  const docs = await BillModel.find({ ownerEmail, deletedAt: { $ne: null } })
+  const docs = await BillModel.find({ deletedAt: { $ne: null } })
     .sort({ deletedAt: -1 })
     .limit(500)
     .lean();
@@ -167,7 +175,7 @@ export type MonthlySummary = {
  * เพราะการปัดเศษรายใบแล้วเอามาบวกกันจะคลาดจากยอดจริงได้ถึงหลักสตางค์ต่อใบ
  */
 export async function getMonthlySummary(): Promise<MonthlySummary[]> {
-  const ownerEmail = await requireOwnerEmail();
+  await requireSignedIn();
   await connectToDatabase();
 
   const rows = await BillModel.aggregate<{
@@ -176,7 +184,7 @@ export async function getMonthlySummary(): Promise<MonthlySummary[]> {
     count: number;
     totalSatang: number;
   }>([
-    { $match: { ownerEmail, deletedAt: null } },
+    { $match: { deletedAt: null } },
     {
       $group: {
         _id: {
@@ -237,7 +245,7 @@ export type CustomerSuggestion = {
  * ใช้ใบล่าสุดเพราะลูกค้าอาจย้ายที่อยู่ — ข้อมูลใหม่กว่าย่อมถูกต้องกว่า
  */
 export async function listCustomers(): Promise<CustomerSuggestion[]> {
-  const ownerEmail = await requireOwnerEmail();
+  await requireSignedIn();
   await connectToDatabase();
 
   const rows = await BillModel.aggregate<{
@@ -248,7 +256,7 @@ export async function listCustomers(): Promise<CustomerSuggestion[]> {
     lastUsedAt: Date;
     billCount: number;
   }>([
-    { $match: { ownerEmail, deletedAt: null, buyerName: { $nin: ["", null] } } },
+    { $match: { deletedAt: null, buyerName: { $nin: ["", null] } } },
     { $sort: { createdAt: -1 } },
     {
       $group: {
@@ -290,7 +298,7 @@ export type ProductSuggestion = {
  * ราคาที่ใหม่กว่าย่อมใกล้เคียงราคาที่จะขายรอบนี้มากกว่า
  */
 export async function listProducts(): Promise<ProductSuggestion[]> {
-  const ownerEmail = await requireOwnerEmail();
+  await requireSignedIn();
   await connectToDatabase();
 
   const rows = await BillModel.aggregate<{
@@ -299,7 +307,7 @@ export async function listProducts(): Promise<ProductSuggestion[]> {
     lastUsedAt: Date;
     useCount: number;
   }>([
-    { $match: { ownerEmail, deletedAt: null } },
+    { $match: { deletedAt: null } },
     // เรียงก่อน unwind เพื่อให้ $first ในขั้น group หยิบของบิลใบล่าสุดจริง ๆ
     { $sort: { createdAt: -1 } },
     { $unwind: "$items" },
@@ -330,16 +338,19 @@ export async function listProducts(): Promise<ProductSuggestion[]> {
  * นับรวมบิลในถังขยะด้วย (ไม่กรอง deletedAt) — เลขที่ออกไปแล้วห้ามถูกใช้ซ้ำ
  * แม้บิลใบนั้นจะถูกลบไปแล้ว เพราะสำเนากระดาษที่ให้ลูกค้าไปแล้วยังอยู่
  *
+ * และนับบิลของทุกบัญชี ไม่ใช่เฉพาะของคนที่กำลังเปิดฟอร์ม — เลขที่เอกสารเป็นชุด
+ * เดียวของบริษัท ถ้าเสนอเลขโดยดูแค่บิลของตัวเอง สองคนที่เปิดบิลวันเดียวกัน
+ * จะได้เลขเดียวกันแล้วไปชนกันตอนกดบันทึก
+ *
  * เลือกใบที่ seq สูงสุดในโค้ดแทนการ sort ใน MongoDB เพราะการเรียงแบบตัวอักษร
  * จะบอกว่า "1000" < "999" ซึ่งผิด ถ้าวันหนึ่งเลขวิ่งเกินสามหลัก
  */
 export async function latestDocNoOfMonth(yearBE: number, month: number): Promise<string> {
-  const ownerEmail = await requireOwnerEmail();
+  await requireSignedIn();
   await connectToDatabase();
 
   const prefix = docNoPrefix(yearBE, month);
   const docs = await BillModel.find({
-    ownerEmail,
     docNo: new RegExp(`^${escapeRegex(prefix)}\d+$`),
   })
     .select("docNo")

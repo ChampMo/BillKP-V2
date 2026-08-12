@@ -15,14 +15,14 @@ import { BACKUP_VERSION, backupFilename } from "@/lib/backup";
  */
 export async function GET() {
   const session = await auth();
-  const ownerEmail = session?.user?.email;
-  if (!ownerEmail) {
+  if (!session?.user?.email) {
     return NextResponse.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 });
   }
 
   try {
     await connectToDatabase();
-    const docs = await BillModel.find({ ownerEmail }).sort({ createdAt: -1 }).lean();
+    // บิลทุกใบของบริษัท ไม่ใช่เฉพาะของบัญชีที่กดปุ่ม — ไฟล์สำรองที่ได้ทั้งไฟล์เดียวจึงกู้ระบบกลับมาได้ครบ
+    const docs = await BillModel.find({}).sort({ createdAt: -1 }).lean();
 
     const payload = {
       version: BACKUP_VERSION,

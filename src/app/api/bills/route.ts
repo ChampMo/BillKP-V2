@@ -6,7 +6,7 @@ import { billSchema, computeTotals } from "@/lib/bill";
 import { listBills, summarizeBills } from "@/lib/bills-server";
 import { isDuplicateKeyError } from "@/lib/mongo-errors";
 
-/** ดึงบิลของผู้ใช้ที่ล็อกอิน รองรับตัวกรองผ่าน query string */
+/** ดึงบิลทั้งหมดของบริษัท รองรับตัวกรองผ่าน query string */
 export async function GET(request: Request) {
   const session = await auth();
   if (!session?.user?.email) {

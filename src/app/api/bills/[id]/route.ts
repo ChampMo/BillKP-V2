@@ -8,15 +8,15 @@ import { isDuplicateKeyError } from "@/lib/mongo-errors";
 
 type Params = { params: Promise<{ id: string }> };
 
-async function requireOwner() {
-  const session = await auth();
-  return session?.user?.email ?? null;
-}
-
-/** ตรวจ session + รูปแบบ id ในที่เดียว ทุก handler เรียกใช้ก่อนแตะฐานข้อมูล */
+/**
+ * ตรวจ session + รูปแบบ id ในที่เดียว ทุก handler เรียกใช้ก่อนแตะฐานข้อมูล
+ *
+ * ไม่กรองด้วยอีเมลของคนที่ล็อกอิน — บิลเป็นของบริษัท ทุกบัญชีที่อยู่ใน
+ * `ALLOWED_EMAILS` แก้และลบบิลใบเดียวกันได้ ด่านกันคนนอกอยู่ที่ตอนล็อกอิน
+ */
 async function guard(params: Params["params"]) {
-  const ownerEmail = await requireOwner();
-  if (!ownerEmail) {
+  const session = await auth();
+  if (!session?.user?.email) {
     return { error: NextResponse.json({ error: "กรุณาเข้าสู่ระบบ" }, { status: 401 }) };
   }
 
@@ -25,7 +25,7 @@ async function guard(params: Params["params"]) {
     return { error: NextResponse.json({ error: "ไม่พบบิลนี้" }, { status: 404 }) };
   }
 
-  return { ownerEmail, id };
+  return { id };
 }
 
 export async function GET(_request: Request, { params }: Params) {
@@ -34,8 +34,7 @@ export async function GET(_request: Request, { params }: Params) {
 
   try {
     await connectToDatabase();
-    // กรอง ownerEmail ใน query เสมอ — ไม่ใช่ดึงมาแล้วค่อยเช็ค
-    const doc = await BillModel.findOne({ _id: check.id, ownerEmail: check.ownerEmail }).lean();
+    const doc = await BillModel.findOne({ _id: check.id }).lean();
     if (!doc) return NextResponse.json({ error: "ไม่พบบิลนี้" }, { status: 404 });
     return NextResponse.json({ bill: toSavedBill(doc) });
   } catch (error) {
@@ -66,7 +65,7 @@ export async function PUT(request: Request, { params }: Params) {
   try {
     await connectToDatabase();
     const updated = await BillModel.findOneAndUpdate(
-      { _id: check.id, ownerEmail: check.ownerEmail, deletedAt: null },
+      { _id: check.id, deletedAt: null },
       {
         $set: {
           ...parsed.data,
@@ -107,7 +106,7 @@ export async function PATCH(request: Request, { params }: Params) {
   try {
     await connectToDatabase();
     const restored = await BillModel.findOneAndUpdate(
-      { _id: check.id, ownerEmail: check.ownerEmail, deletedAt: { $ne: null } },
+      { _id: check.id, deletedAt: { $ne: null } },
       { $set: { deletedAt: null } },
       { new: true }
     ).lean();
@@ -136,16 +135,13 @@ export async function DELETE(request: Request, { params }: Params) {
     await connectToDatabase();
 
     if (purge) {
-      const removed = await BillModel.findOneAndDelete({
-        _id: check.id,
-        ownerEmail: check.ownerEmail,
-      }).lean();
+      const removed = await BillModel.findOneAndDelete({ _id: check.id }).lean();
       if (!removed) return NextResponse.json({ error: "ไม่พบบิลนี้" }, { status: 404 });
       return NextResponse.json({ ok: true, purged: true });
     }
 
     const trashed = await BillModel.findOneAndUpdate(
-      { _id: check.id, ownerEmail: check.ownerEmail, deletedAt: null },
+      { _id: check.id, deletedAt: null },
       { $set: { deletedAt: new Date() } },
       { new: true }
     ).lean();
