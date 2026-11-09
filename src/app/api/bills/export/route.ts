@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { connectToDatabase } from "@/lib/mongodb";
-import { BillModel, toSavedBill } from "@/models/Bill";
-import { BACKUP_VERSION, backupFilename } from "@/lib/backup";
+import { backupFilename } from "@/lib/backup";
+import { buildBackup } from "@/lib/backup-export";
 
 /**
  * ดาวน์โหลดสำรองข้อมูลทั้งหมดเป็น JSON
@@ -20,15 +19,7 @@ export async function GET() {
   }
 
   try {
-    await connectToDatabase();
-    // บิลทุกใบของบริษัท ไม่ใช่เฉพาะของบัญชีที่กดปุ่ม — ไฟล์สำรองที่ได้ทั้งไฟล์เดียวจึงกู้ระบบกลับมาได้ครบ
-    const docs = await BillModel.find({}).sort({ createdAt: -1 }).lean();
-
-    const payload = {
-      version: BACKUP_VERSION,
-      exportedAt: new Date().toISOString(),
-      bills: docs.map(toSavedBill),
-    };
+    const payload = await buildBackup();
 
     return new NextResponse(JSON.stringify(payload, null, 2), {
       headers: {

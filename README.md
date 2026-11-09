@@ -89,11 +89,41 @@ vercel --prod
 
 หรือ push ขึ้น GitHub แล้วกด **Import Project** ใน Vercel
 
-**หลัง deploy ต้องทำ 2 อย่าง:**
+**หลัง deploy ต้องทำ 3 อย่าง:**
 
 1. ใส่ environment variables ทั้ง 5 ตัวใน **Project → Settings → Environment Variables**
    (`AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET`, `ALLOWED_EMAILS`, `MONGODB_URI`)
 2. เพิ่ม redirect URI ของโดเมนจริงใน Google Cloud Console (ข้อ 2 ด้านบน)
+3. ตั้งค่างานอัตโนมัติ (กันฐานข้อมูลหยุด + ส่งไฟล์สำรองทางอีเมล) ตามหัวข้อถัดไป
+
+---
+
+## งานอัตโนมัติ (Vercel Cron)
+
+ตั้งไว้ใน `vercel.json` Vercel จะเรียกให้เองหลัง deploy:
+
+| งาน | รอบ (เวลาไทย) | ทำอะไร |
+|---|---|---|
+| `/api/cron/keepalive` | ทุกวัน ~03:00 | อ่านฐานข้อมูลหนึ่งครั้ง กัน Atlas หยุดคลัสเตอร์ฟรีเพราะไม่มีคนใช้นาน |
+| `/api/cron/backup` | ทุกวันจันทร์ ~04:00 | ส่งไฟล์สำรองบิลทั้งหมด (รวมถังขยะ) เข้าอีเมล |
+
+ไฟล์แนบในอีเมลคือไฟล์เดียวกับปุ่ม **ดาวน์โหลดข้อมูลทั้งหมด** กู้คืนผ่านหน้า **นำเข้า / สำรอง** ได้เลย
+**ถ้าอีเมลสำรองไม่มาตามรอบ แปลว่ามีอะไรพัง** ให้ดู log ที่ Vercel → Project → Logs
+
+ตั้ง environment variables เพิ่มใน Vercel (แล้ว redeploy):
+
+| ตัวแปร | ค่า |
+|---|---|
+| `CRON_SECRET` | สตริงสุ่มยาว ๆ เช่นจาก `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` — Vercel แนบให้เองตอนเรียก cron คนนอกเรียก route นี้ไม่ได้ ถ้าไม่ตั้ง งานทั้งสองจะไม่ทำงานเลย |
+| `RESEND_API_KEY` | สมัคร [Resend](https://resend.com) (ฟรี) → API Keys → Create |
+| `BACKUP_EMAIL_TO` | อีเมลที่รับไฟล์สำรอง (หลายอีเมลคั่นด้วย `,`) |
+| `BACKUP_EMAIL_FROM` | ไม่บังคับ — ค่าตั้งต้นคือ `onboarding@resend.dev` |
+
+> ถ้าใช้ผู้ส่งตั้งต้น `onboarding@resend.dev` Resend ส่งได้ **เฉพาะอีเมลที่ใช้สมัคร Resend เท่านั้น**
+> จึงควรสมัคร Resend ด้วยอีเมลที่จะรับไฟล์สำรอง ถ้าจะส่งหาอีเมลอื่นต้องยืนยันโดเมนใน Resend
+> แล้วตั้ง `BACKUP_EMAIL_FROM` เป็นอีเมลบนโดเมนนั้น
+
+ทดสอบหลังตั้งค่าเสร็จ: Vercel → Project → Settings → Cron Jobs → กด **Run** ข้างงานที่ต้องการ
 
 > ⚠️ **Vercel Hobby (ฟรี) อนุญาตเฉพาะงานส่วนตัวที่ไม่ใช่เชิงพาณิชย์** ตาม Fair Use Policy
 > ระบบออกบิลของบริษัทถือเป็น commercial use ทางเทคนิค ถ้าอยากอยู่ในกติกาเป๊ะ ๆ

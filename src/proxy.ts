@@ -2,13 +2,17 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 
 /**
- * กันทั้งเว็บไว้ด้วยไฟล์เดียว — ทุก path ที่ไม่ใช่ /login, /api/auth/* หรือไฟล์ static
+ * กันทั้งเว็บไว้ด้วยไฟล์เดียว — ทุก path ที่ไม่ใช่ /login, /api/auth/*, /api/cron/* หรือไฟล์ static
  * ต้องล็อกอินก่อนเท่านั้น ไม่มีหน้าไหนหลุดออกไปสาธารณะโดยไม่ตั้งใจ
  */
 export default auth((req) => {
   const { pathname } = req.nextUrl;
 
-  const isPublic = pathname === "/login" || pathname.startsWith("/api/auth");
+  // /api/cron/* ถูกเรียกจาก Vercel Cron ซึ่งไม่มี session — แต่ละ route ตรวจ CRON_SECRET เอง
+  const isPublic =
+    pathname === "/login" ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/cron/");
   if (isPublic) return NextResponse.next();
 
   if (!req.auth) {
