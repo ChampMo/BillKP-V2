@@ -5,6 +5,7 @@ import { BillModel, toSavedBill } from "@/models/Bill";
 import { billSchema, computeTotals } from "@/lib/bill";
 import { listBills, summarizeBills } from "@/lib/bills-server";
 import { isDuplicateKeyError } from "@/lib/mongo-errors";
+import { markDataChanged } from "@/lib/backup-state";
 
 /** ดึงบิลทั้งหมดของบริษัท รองรับตัวกรองผ่าน query string */
 export async function GET(request: Request) {
@@ -71,6 +72,7 @@ export async function POST(request: Request) {
       totalSatang: computeTotals(parsed.data.items).grandTotal,
       deletedAt: null,
     });
+    await markDataChanged();
     return NextResponse.json({ bill: toSavedBill(created.toObject()) }, { status: 201 });
   } catch (error) {
     // เลขที่เอกสารชน unique index — ไม่ใช่ความผิดพลาดของระบบ แต่เป็นเรื่องที่

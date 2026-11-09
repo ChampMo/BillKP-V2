@@ -6,6 +6,7 @@ import { BillModel, type BillDocument } from "@/models/Bill";
 import { backupFileSchema, type ImportableBill } from "@/lib/backup";
 import { computeTotals } from "@/lib/bill";
 import { isDuplicateKeyError } from "@/lib/mongo-errors";
+import { markDataChanged } from "@/lib/backup-state";
 
 /** จำนวนบิลสูงสุดต่อการนำเข้าหนึ่งครั้ง กันไฟล์ผิดพลาดถล่มฐานข้อมูล */
 const MAX_IMPORT = 5000;
@@ -137,6 +138,8 @@ export async function POST(request: Request) {
     if (toInsert.length > 0) {
       await BillModel.insertMany(toInsert, { timestamps: false });
     }
+
+    if (toInsert.length > 0 || toUpdate.length > 0) await markDataChanged();
 
     return NextResponse.json({ imported: toInsert.length, updated: toUpdate.length });
   } catch (error) {

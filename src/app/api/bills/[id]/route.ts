@@ -5,6 +5,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import { BillModel, toSavedBill } from "@/models/Bill";
 import { billSchema, computeTotals } from "@/lib/bill";
 import { isDuplicateKeyError } from "@/lib/mongo-errors";
+import { markDataChanged } from "@/lib/backup-state";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -76,6 +77,7 @@ export async function PUT(request: Request, { params }: Params) {
     ).lean();
 
     if (!updated) return NextResponse.json({ error: "ไม่พบบิลนี้" }, { status: 404 });
+    await markDataChanged();
     return NextResponse.json({ bill: toSavedBill(updated) });
   } catch (error) {
     if (isDuplicateKeyError(error)) {
@@ -112,6 +114,7 @@ export async function PATCH(request: Request, { params }: Params) {
     ).lean();
 
     if (!restored) return NextResponse.json({ error: "ไม่พบบิลนี้ในถังขยะ" }, { status: 404 });
+    await markDataChanged();
     return NextResponse.json({ bill: toSavedBill(restored) });
   } catch (error) {
     console.error("PATCH /api/bills/[id] failed", error);
@@ -137,6 +140,7 @@ export async function DELETE(request: Request, { params }: Params) {
     if (purge) {
       const removed = await BillModel.findOneAndDelete({ _id: check.id }).lean();
       if (!removed) return NextResponse.json({ error: "ไม่พบบิลนี้" }, { status: 404 });
+      await markDataChanged();
       return NextResponse.json({ ok: true, purged: true });
     }
 
@@ -147,6 +151,7 @@ export async function DELETE(request: Request, { params }: Params) {
     ).lean();
 
     if (!trashed) return NextResponse.json({ error: "ไม่พบบิลนี้" }, { status: 404 });
+    await markDataChanged();
     return NextResponse.json({ ok: true, purged: false });
   } catch (error) {
     console.error("DELETE /api/bills/[id] failed", error);

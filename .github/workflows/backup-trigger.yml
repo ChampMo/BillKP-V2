@@ -1,0 +1,40 @@
+# เรียก /api/cron/backup ทุก 15 นาที — route ตัดสินเองว่าถึงเวลาส่งไฟล์สำรองหรือยัง
+# (ส่งเมื่อข้อมูลเปลี่ยนแล้วเงียบครบ 1 ชั่วโมง ดู src/lib/backup-schedule.ts)
+#
+# ใช้ GitHub Actions เพราะ Vercel Cron แผนฟรีรันได้แค่วันละครั้ง
+# ถ้า workflow นี้หยุด (GitHub ปิด schedule ของ repo สาธารณะที่ไม่มีความเคลื่อนไหว 60 วัน)
+# Vercel Cron ใน vercel.json ยังเรียก route เดียวกันวันละครั้งเป็นตัวสำรอง
+#
+# ต้องตั้งใน GitHub → Settings → Secrets and variables → Actions:
+#   Secrets   : CRON_SECRET  (ค่าเดียวกับใน Vercel)
+#   Variables : SITE_URL     (โดเมน production เช่น https://bill-kp-v2.vercel.app)
+name: Backup trigger
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: backup-trigger
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Call backup cron
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ vars.SITE_URL }}
+        run: |
+          if [ -z "$CRON_SECRET" ] || [ -z "$SITE_URL" ]; then
+            echo "::error::ยังไม่ได้ตั้ง secret CRON_SECRET หรือ variable SITE_URL"
+            exit 1
+          fi
+          curl --fail-with-body --silent --show-error --max-time 90 \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "${SITE_URL%/}/api/cron/backup"

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { BillModel } from "@/models/Bill";
+import { markDataChanged } from "@/lib/backup-state";
 
 /**
  * ล้างถังขยะทั้งหมดทันที ไม่ต้องรอครบ 30 วัน
@@ -18,6 +19,7 @@ export async function DELETE() {
   try {
     await connectToDatabase();
     const result = await BillModel.deleteMany({ deletedAt: { $ne: null } });
+    if (result.deletedCount) await markDataChanged();
     return NextResponse.json({ deleted: result.deletedCount ?? 0 });
   } catch (error) {
     console.error("DELETE /api/trash failed", error);
