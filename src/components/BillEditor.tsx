@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import SheetStack from "@/components/SheetStack";
+import type { CheckField } from "@/components/BillSheet";
 import Toolbar, { type SheetCounts } from "@/components/Toolbar";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useToast } from "@/components/Toast";
@@ -16,10 +17,30 @@ import {
   isBlankBill,
   type Bill,
 } from "@/lib/bill";
-import { isoToShortDateTH, todayISO } from "@/lib/date-th";
+import { defaultBillDateISO, isoToShortDateTH } from "@/lib/date-th";
 import { printSheets, withDocumentTitle, type PaperSize } from "@/lib/print";
 
 export const DRAFT_KEY = "billkp:draft";
+
+/** ช่องไหนของฟอร์มที่ค้างไว้ผ่านการตรวจแล้ว — แยก key เพราะไม่ใช่ข้อมูลของบิล */
+const CHECKED_KEY = "billkp:draft-checked";
+
+type Checked = Record<CheckField, boolean>;
+
+/** ฟอร์มใหม่ทุกครั้งเริ่มจาก "ยังไม่ได้ตรวจ" เพราะเลขที่และวันที่ระบบเดาให้ */
+const UNCHECKED: Checked = { docNo: false, date: false };
+
+function readChecked(): Checked {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(CHECKED_KEY) ?? "null");
+    return {
+      docNo: saved?.docNo === true,
+      date: saved?.date === true,
+    };
+  } catch {
+    return UNCHECKED;
+  }
+}
 
 /**
  * โยนบิลเข้าฟอร์ม "เปิดบิลใหม่" แล้วให้หน้านั้นหยิบไปใช้ต่อ
@@ -31,6 +52,8 @@ export function stageBillForNewForm(source: Bill): boolean {
   try {
     const staged: Bill = { ...duplicateBill(source), ...todayOnBill() };
     window.localStorage.setItem(DRAFT_KEY, JSON.stringify(staged));
+    // บิลที่คัดลอกมาได้วันที่ใหม่และเลขที่ใหม่ ต้องตรวจใหม่ทั้งคู่
+    window.localStorage.removeItem(CHECKED_KEY);
     return true;
   } catch {
     return false;
@@ -38,11 +61,11 @@ export function stageBillForNewForm(source: Bill): boolean {
 }
 
 /**
- * วันที่ของวันนี้สำหรับใส่ในบิลใหม่
+ * วันที่ตั้งต้นสำหรับใส่ในบิลใหม่ (วันเดียวกันของเดือนที่แล้ว)
  * ทั้งข้อความบนกระดาษและวันที่ที่ระบบใช้จัดกลุ่มยอดมาจากค่าเดียวกัน
  */
 function todayOnBill(): Pick<Bill, "date" | "issuedAt"> {
-  const iso = todayISO();
+  const iso = defaultBillDateISO();
   return { issuedAt: iso, date: isoToShortDateTH(iso) };
 }
 
@@ -76,6 +99,7 @@ export default function BillEditor() {
   const [confirmClear, setConfirmClear] = useState(false);
   const [saving, setSaving] = useState(false);
   const [ready, setReady] = useState(false);
+  const [checked, setChecked] = useState<Checked>(UNCHECKED);
 
   /**
    * ตั้งค่าฟอร์มตั้งต้น: บิลที่ส่งมาให้ทำสำเนา > ฟอร์มที่ค้างไว้ > ฟอร์มเปล่า
@@ -84,8 +108,11 @@ export default function BillEditor() {
    * ไม่มี localStorage — ถ้าอ่านตอน init ฝั่ง client จะได้ HTML คนละแบบกับ server
    */
   useEffect(() => {
+    const draft = readDraft();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- กู้ค่าจาก localStorage ครั้งเดียวตอน mount
-    setBill(readDraft() ?? initialBill());
+    setBill(draft ?? initialBill());
+    // สถานะการตรวจใช้ได้เฉพาะกับฟอร์มที่ค้างไว้ใบเดียวกัน
+    setChecked(draft ? readChecked() : UNCHECKED);
     setReady(true);
   }, []);
 
@@ -99,6 +126,15 @@ export default function BillEditor() {
       // โหมดส่วนตัวของบางเบราว์เซอร์เขียน localStorage ไม่ได้
     }
   }, [bill, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
+    try {
+      window.localStorage.setItem(CHECKED_KEY, JSON.stringify(checked));
+    } catch {
+      /* ignore */
+    }
+  }, [checked, ready]);
 
   // ข้อมูลเก่าไว้เติมช่องชื่อลูกค้าและรายการสินค้าให้อัตโนมัติ
   const suggestions = useSuggestions();
@@ -131,6 +167,7 @@ export default function BillEditor() {
 
   const clearForm = () => {
     setBill(initialBill());
+    setChecked(UNCHECKED);
     setConfirmClear(false);
     try {
       window.localStorage.removeItem(DRAFT_KEY);
@@ -192,6 +229,8 @@ export default function BillEditor() {
         zoom={zoom}
         suggestions={suggestions}
         showHints
+        needsCheck={{ docNo: !checked.docNo, date: !checked.date }}
+        onCheck={(field) => setChecked((current) => ({ ...current, [field]: true }))}
       />
 
       <Toolbar

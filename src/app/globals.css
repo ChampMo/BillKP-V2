@@ -193,6 +193,13 @@ body {
   background: rgb(251 146 60 / 0.18);
 }
 
+/* ช่องที่ระบบเติมให้เองและยังไม่มีคนกดยืนยัน — ส้มเข้มให้สะดุดตา (บนจอเท่านั้น) */
+.sheet-editable .sheet-input.sheet-needs-check:not([readonly]) {
+  background: rgb(251 146 60 / 0.28);
+  box-shadow: inset 0 0 0 1.5px rgb(234 88 12 / 0.75);
+  color: rgb(194 65 12);
+}
+
 .sheet-editable .sheet-input:focus:not([readonly]) {
   background: rgb(59 130 246 / 0.14);
   box-shadow: inset 0 0 0 1px rgb(59 130 246 / 0.6);
@@ -230,6 +237,10 @@ body {
     background: transparent !important;
     box-shadow: none !important;
     outline: none !important;
+  }
+
+  .sheet-editable .sheet-input.sheet-needs-check {
+    color: inherit !important;
   }
 
   .print-sheet {

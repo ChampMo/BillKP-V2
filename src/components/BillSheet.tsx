@@ -33,7 +33,13 @@ type Props = {
   customers?: CustomerSuggestion[];
   /** รายการสินค้าที่เคยขายไว้เติมอัตโนมัติ */
   products?: ProductSuggestion[];
+  /** ช่องที่ระบบเติมให้เองและยังรอคนตรวจ — แสดงเป็นสีส้มพร้อมปุ่ม "ตรวจแล้ว" */
+  needsCheck?: Partial<Record<CheckField, boolean>>;
+  onCheck?: (field: CheckField) => void;
 };
+
+/** ช่องที่ต้องให้คนกดยืนยันก่อน เพราะระบบเดาค่าให้ */
+export type CheckField = "docNo" | "date";
 
 /** ตำแหน่งที่ต้องเว้นช่องไฟตามแบบฟอร์มเลขประจำตัวผู้เสียภาษี (X-XXXX-XXXXX-XX-X) */
 const TAX_ID_GAP_BEFORE = new Set([1, 5, 10, 12]);
@@ -46,9 +52,27 @@ export default function BillSheet({
   showHints = false,
   customers = [],
   products = [],
+  needsCheck = {},
+  onCheck,
 }: Props) {
   const isMain = variant === "main";
   const readOnly = !onChange;
+
+  const flagged = (field: CheckField) => !readOnly && Boolean(needsCheck[field]);
+
+  /** ปุ่มยืนยันที่วางทับปลายขวาของช่อง กดแล้วช่องกลับเป็นสีปกติและปุ่มหายไป */
+  const checkButton = (field: CheckField, label: string) =>
+    flagged(field) && (
+      <button
+        type="button"
+        onClick={() => onCheck?.(field)}
+        aria-label={`ยืนยันว่าตรวจ${label}แล้ว`}
+        className="no-print absolute right-1 top-1/2 -translate-y-1/2 z-20 h-6 px-2 rounded-md bg-orange-500 text-white text-xs font-medium flex items-center gap-1 shadow-sm hover:bg-orange-600 transition-colors"
+      >
+        <Icon icon="ph:check-bold" width={12} height={12} />
+        ตรวจแล้ว
+      </button>
+    );
   const taxRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   const totals = computeTotals(bill.items);
@@ -214,9 +238,10 @@ export default function BillSheet({
             {textField(
               bill.docNo,
               (next) => update({ docNo: next }),
-              "w-80 text-center",
+              `w-80 text-center ${flagged("docNo") ? "sheet-needs-check" : ""}`,
               "เลขที่เอกสาร"
             )}
+            {checkButton("docNo", "เลขที่เอกสาร")}
           </div>
         </div>
 
@@ -248,11 +273,12 @@ export default function BillSheet({
             />
           </div>
           <div className="shrink-0">วันที่</div>
-          <div className={`w-4/12 border-b border-dashed ${border}`}>
+          <div className={`relative w-4/12 border-b border-dashed ${border}`}>
+            {checkButton("date", "วันที่")}
             <DateField
               label="วันที่บนบิล"
               readOnly={readOnly}
-              className="w-full pl-10 h-8"
+              className={`w-full pl-10 h-8 ${flagged("date") ? "sheet-needs-check" : ""}`}
               value={bill.issuedAt}
               display={bill.date}
               // เขียนทั้งสองช่องจากค่าเดียวกันเสมอ ข้อความบนกระดาษกับวันที่ที่ระบบ

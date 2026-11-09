@@ -1,6 +1,6 @@
 "use client";
 
-import BillSheet from "@/components/BillSheet";
+import BillSheet, { type CheckField } from "@/components/BillSheet";
 import type { SheetCounts } from "@/components/Toolbar";
 import type { Bill } from "@/lib/bill";
 import type { Suggestions } from "@/lib/use-suggestions";
@@ -13,6 +13,8 @@ type Props = {
   zoom: number;
   showHints?: boolean;
   suggestions?: Suggestions;
+  needsCheck?: Partial<Record<CheckField, boolean>>;
+  onCheck?: (field: CheckField) => void;
 };
 
 /**
@@ -29,6 +31,8 @@ export default function SheetStack({
   zoom,
   showHints,
   suggestions,
+  needsCheck,
+  onCheck,
 }: Props) {
   const render = (variant: "main" | "copy", count: number) =>
     Array.from({ length: count }, (_, index) => (
@@ -41,6 +45,8 @@ export default function SheetStack({
           showHints={showHints}
           customers={suggestions?.customers}
           products={suggestions?.products}
+          needsCheck={needsCheck}
+          onCheck={onCheck}
         />
       </div>
     ));

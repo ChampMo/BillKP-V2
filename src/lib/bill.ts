@@ -12,7 +12,7 @@ export const TAX_ID_LENGTH = 13;
 /**
  * จำนวนหลักของเลขรันในเลขที่เอกสาร — 001, 002, ... ต่อหนึ่งเดือน
  *
- * เลขที่เอกสารเป็นรูปแบบ ปีพ.ศ./เดือน/ลำดับ เช่น 2569/08/001
+ * เลขที่เอกสารเป็นรูปแบบ ปีพ.ศ./เดือน/ลำดับ เช่น 2569/8/001 (เดือนไม่ใส่ 0 นำ)
  * เติมศูนย์หน้าไว้เพื่อให้เลขเรียงถูกต้องเวลาเปิดแฟ้มดูตามลำดับ
  */
 export const DOC_NO_SEQ_DIGITS = 3;
@@ -160,12 +160,12 @@ export type ParsedDocNo = {
   seq: number;
 };
 
-/** คำนำหน้าเลขที่เอกสารของเดือนหนึ่ง ๆ เช่น "2569/08/" */
+/** คำนำหน้าเลขที่เอกสารของเดือนหนึ่ง ๆ เช่น "2569/8/" — เดือนไม่ใส่ 0 นำ */
 export function docNoPrefix(yearBE: number, month: number): string {
-  return `${yearBE}/${String(month).padStart(2, "0")}/`;
+  return `${yearBE}/${month}/`;
 }
 
-/** ประกอบเลขที่เอกสารเต็ม เช่น (2569, 8, 1) -> "2569/08/001" */
+/** ประกอบเลขที่เอกสารเต็ม เช่น (2569, 8, 1) -> "2569/8/001" */
 export function formatDocNo(yearBE: number, month: number, seq: number): string {
   return `${docNoPrefix(yearBE, month)}${String(seq).padStart(DOC_NO_SEQ_DIGITS, "0")}`;
 }

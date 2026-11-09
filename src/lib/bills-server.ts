@@ -3,7 +3,7 @@ import mongoose from "mongoose";
 import { auth } from "@/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { BillModel, toSavedBill } from "@/models/Bill";
-import { docNoPrefix, parseDocNo, VAT_RATE, type SavedBill } from "@/lib/bill";
+import { parseDocNo, VAT_RATE, type SavedBill } from "@/lib/bill";
 import { THAI_TIMEZONE } from "@/lib/date-th";
 
 /**
@@ -349,9 +349,11 @@ export async function latestDocNoOfMonth(yearBE: number, month: number): Promise
   await requireSignedIn();
   await connectToDatabase();
 
-  const prefix = docNoPrefix(yearBE, month);
+  // รับทั้งเดือนแบบใหม่ "2569/8/" และบิลเก่าที่เคยใส่ 0 นำ "2569/08/"
+  // เลขรันของเดือนจะได้ต่อกันไม่เริ่ม 001 ใหม่
+  // ใช้ \\d เพราะใน template string "\d" กลายเป็นตัว d เฉย ๆ
   const docs = await BillModel.find({
-    docNo: new RegExp(`^${escapeRegex(prefix)}\d+$`),
+    docNo: new RegExp(`^${yearBE}/0?${month}/\\d+$`),
   })
     .select("docNo")
     .lean();

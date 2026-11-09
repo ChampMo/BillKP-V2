@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isoToShortDateTH, parseThaiDateText, todayISO } from "./date-th";
+import { defaultBillDateISO, isoToShortDateTH, parseThaiDateText, todayISO } from "./date-th";
 
 describe("parseThaiDateText", () => {
   it("อ่านรูปแบบที่พิมพ์บนบิลจริง: วัน ชื่อเดือนย่อ ปี พ.ศ. สองหลัก", () => {
@@ -64,5 +64,20 @@ describe("todayISO", () => {
   it("อ่านวันที่ตามเวลาไทย ไม่ใช่ UTC", () => {
     // 31 ธ.ค. 19:00 UTC = 1 ม.ค. 02:00 ที่ไทย — ต้องได้วันที่ของไทย
     expect(todayISO(new Date("2026-12-31T19:00:00.000Z"))).toBe("2027-01-01");
+  });
+});
+
+describe("defaultBillDateISO", () => {
+  it("ใช้วันเดียวกันของเดือนที่แล้ว", () => {
+    expect(defaultBillDateISO(new Date("2026-11-09T05:00:00.000Z"))).toBe("2026-10-09");
+  });
+
+  it("มกราคมย้อนไปธันวาคมของปีก่อน", () => {
+    expect(defaultBillDateISO(new Date("2027-01-15T05:00:00.000Z"))).toBe("2026-12-15");
+  });
+
+  it("วันที่เกินจำนวนวันของเดือนที่แล้วใช้วันสุดท้ายแทน", () => {
+    expect(defaultBillDateISO(new Date("2027-03-31T05:00:00.000Z"))).toBe("2027-02-28");
+    expect(defaultBillDateISO(new Date("2028-03-31T05:00:00.000Z"))).toBe("2028-02-29");
   });
 });

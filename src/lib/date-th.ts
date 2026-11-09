@@ -102,6 +102,31 @@ export function todayISO(now: Date = new Date()): string {
 }
 
 /**
+ * วันที่ตั้งต้นของบิลใหม่ = วันเดียวกันของเดือนที่แล้ว (ตามเวลาไทย)
+ *
+ * บิลส่วนใหญ่ออกย้อนหลังให้เดือนก่อน จึงตั้งต้นที่เดือนที่แล้ว ผู้ใช้แก้เองได้
+ * ถ้าเดือนที่แล้วไม่มีวันนั้น (เช่น 31 มี.ค. -> ก.พ.) ใช้วันสุดท้ายของเดือนแทน
+ */
+export function defaultBillDateInThailand(now: Date = new Date()): {
+  yearBE: number;
+  month: number;
+  day: number;
+} {
+  const today = todayInThailand(now);
+  const month = today.month === 1 ? 12 : today.month - 1;
+  const yearBE = today.month === 1 ? today.yearBE - 1 : today.yearBE;
+  // วันที่ 0 ของเดือนถัดไป = วันสุดท้ายของเดือนนี้
+  const daysInMonth = new Date(yearBE - 543, month, 0).getDate();
+  return { yearBE, month, day: Math.min(today.day, daysInMonth) };
+}
+
+/** วันที่ตั้งต้นของบิลใหม่ในรูปแบบ "2026-10-09" */
+export function defaultBillDateISO(now: Date = new Date()): string {
+  const { yearBE, month, day } = defaultBillDateInThailand(now);
+  return `${yearBE - 543}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+/**
  * "2026-08-11" -> "11/08/2569"
  *
  * แยกสตริงตรง ๆ ไม่แปลงผ่าน Date เพราะ new Date("2026-08-11") อ่านเป็นเที่ยงคืน UTC
